@@ -1,0 +1,165 @@
+---
+title: "Bulk ATAC-seq sample quality"
+date: "`r Sys.Date()`"
+output: html_document
+fig_width: 6 
+fig_height: 4 
+params:
+  folder: "/Users/whalemacbook/Documents/Dissertation/project/test_data/TE0001/"
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+<font size=3>The predictive model contains four predictors:  rating ~ TSSE_cov + perc_readsInBackground + perc_readsInPro + perc_readsInBAMPEpeaks.</font>
+
+
+
+```{r, echo=FALSE}
+
+sampleID<-basename(params$folder)
+metr<-read.csv(paste0(params$folder,"/5.Results/",sampleID,"_metrics.csv"))
+reads<-read.csv(paste0(params$folder,"/5.Results/",sampleID,"_reads.csv"))
+reads_pre<-reads
+reads_pre$mito_reads<-reads$mito_reads/reads$num_reads
+reads_pre[,4:9]<-reads[,4:9]/reads$readsAfterFilter
+all_metr<-cbind(metr,reads)
+colnames(all_metr)[17]<-"perc_readsInPro"
+colnames(all_metr)[20]<-"perc_readsInBAMPEpeaks"
+colnames(all_metr)[22]<-"perc_readsInBackground"
+
+prob<-predict.glm(object = bulkATACquality:::model,newdata=all_metr,type = "response")
+#predict_result=ifelse(prob>0.258,print("This sample is of good quality"),print("This sample is NOT of good quality "))
+predict_result=ifelse(prob>0.258,qua<-"of good",qua<-"NOT of good")
+cl=ifelse(prob>0.258,cl<-"green",cl<-"red")
+```
+
+**<font size=3 color=`r cl`>This sample `r sampleID` is `r qua` quality.</font>**
+
+
+## Reads statistics
+
+
+```{r reads_stat, echo=FALSE}
+
+library(knitr)
+perc<-data.frame("-","-","-",reads_pre[4:9])
+colnames(perc)<-colnames(reads)
+reads_final<-cbind(t(reads),t(perc))
+rownames(reads_final)<-c("Total reads","Mitochondrial reads","Reads after filtering","Reads in promoter","Reads in NFR peaks","Reads in NFR peaks overlapping promoters","Reads in BAMPE peaks","Reads in BAMPE peaks overlapping promoters","Reads in background")
+knitr::kable(reads_final)
+
+  ```
+
+## Promoter/Transcript body (PT) Score
+<font size=3>PT score is calculated as the coverage of promoter divided by the coverage of its transcript body. PT score will show if the signal is enriched in promoters. For samples of good quality, when the coverage is greater (x value gets close to 0), the ratio of the coverage of the promoter to the coverage of its transcript should be greater, that is, a greater PT score. Therefore, the slope of the fitted line should be significantly greater than 0. The red line indicates the fitted linear regression line of all points, whether the slope of fitted line is significantly bigger than 0 is indicated by P value.
+
+Including all points:</font>
+
+
+
+```{r PTscore, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_PT_score.png"))
+```
+
+
+
+```{r PT_score, echo=FALSE }
+metr$p_PT
+```
+
+<font size=3> Excluding outliers: 
+In order to avoid the outliers seriously affecting the slope of the fitted line, a fitted line is also generated after removing the outliers.</font>
+```{r PTscore_exc, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_PT_score_excout.png"))
+
+metr$p_PT_excout
+
+```
+
+## Nucleosome Free Regions (NFR) Score
+
+<font size=3>NFR score is a ratio between cut signal adjacent to TSS and that flanking the corresponding TSS. Each TSS window of 400 bp is first divided into 3 sub-regions: the most upstream 150 bp (n1), the most downstream of 150 bp (n2), and the middle 100 bp (nf). Then the fragments with 5’ ends overlapping each region are calculated for each TSS. The NFR score for each TSS is calculated as NFR-score = log2(nf) - log2((n1+n2)/2). A plot can be generated with the NFR scores as Y-axis and the average signals of 400 bp window as X-axis, very like a MA plot for gene expression data. For samples of good quality, when the coverage is greater (x value gets close to 0), the ratio between cut signal adjacent to TSS and that flanking the corresponding TSS should be greater, that is, a greater NFR score. Therefore, the slope of the fitted line should be significantly greater than 0. The red line indicates the fitted linear regression line of all points, whether the slope of fitted line is significantly bigger than 0 is indicated by P value.
+
+A linear regression line of points is fitted, whether the slope of fitted line is significantly bigger than 0 is indicated by P value.
+
+Including all points:</font>
+```{r NFRscore, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_NFR_score.png"))
+metr$p_NFR
+```
+
+<font size=3>Excluding outliers:
+In order to avoid the outliers seriously affecting the slope of the fitted line, a fitted line is also generated after removing the outliers.</font>
+```{r NFRscore_exc, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_NFR_score_excout.png"))
+
+metr$p_NFR_excout
+```
+
+## Hexbins of NFR Score
+
+<font size=3>Since each point in the NFR plot represents a transcription start site (TSS), and there are many TSSs with the same average coverage and NFR score overlap with each other, a hexagonal density map is generated to show the distribution of these points.</font>
+
+```{r hexbins_NFRscore, echo=FALSE,out.width="600px",fig.align='center'}
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_NFR_score_hexagonalbins.png"))
+
+metr$var_countinhexbins
+```
+
+
+## Transcription Start Site (TSS) Enrichment Score
+
+<font size=3>TSS enrichment score is a raio between aggregate distribution of reads centered on TSSs and that flanking the corresponding TSSs. TSS score = the depth of TSS (each 100bp window within 1000 bp each side) / the depth of end flanks (100bp each end). TSSE score = max(mean(TSS score in each window)). TSS enrichment score is calculated according to the definition at https://www.encodeproject.org/data-standards/terms/#enrichment. Transcription start site (TSS) enrichment values are dependent on the reference files used; cutoff values for high quality data are listed in the following table from https://www.encodeproject.org/atac-seq/.</font>
+
+```{r fig.width=10, fig.height=5, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_TSSEscore.png"))
+ 
+metr$TSSE_cov
+metr$TSSE_wid
+```
+
+
+
+## Transcription Start Site (TSS) Signal
+<font size=3> Based on the inferred size of the sequenced fragments, read alignments were split into nucleosome-free bin (38–100 bp), intermediate bin 1 (100–180 bp), mono-nucleosome bin (180–247 bp), intermediate bin 2 (247–315 bp), di-nucleosome bin (315–473 bp), intermediate bin 3 (473–558 bp), tri-nucleosome bin (558–615 bp), and others (615–2000 bp). For plotting read coverage signal around TSSs from different inferred chromatin states, reads in nucleosome-free and mono-nucleosome bins were directly used, while reads in di- and tri-nucleosome bins were extended based on their aligned templates and then were split into two and three reads, respectively. Reads in intermediate bins and longer than 615 bp were not included for plotting signal distribution around TSSs. By averaging the signal across all active TSSs, we should observe that nucleosome-free fragments are enriched at the TSSs, whereas the nucleosome-bound fragments should be enriched both upstream and downstream of the active TSSs and display characteristic phasing of upstream and downstream nucleosomes. </font>
+
+```{r TSS signal, echo=FALSE }
+knitr::include_graphics(paste0(params$folder,"5.Results/",sampleID,"_TSS_signal_plot.png"))
+
+metr$TSSsignal_cov
+metr$TSSsignal_difference
+```
+
+## Downsampling
+<font size=3> Downsampling is used to investigate the changing trend of several metrics. Number of reads for downsampling is 600000, 9000000, 12000000, 15000000, 16000000, 17000000, 18000000, 19000000 and 20000000 respectively.
+
+Number of passing points is determined by points with log2meanCoverage > -5 and NFR score > 0 in NFR score plot.</font>
+```{r down_num_passingpoints, echo=FALSE, out.width = "500px",fig.align='center'  }
+knitr::include_graphics(paste0(params$folder,"6.Downsampling/Number_passingpoints_downsampling.png"))
+
+```
+
+
+```{r readsinNFR, echo=FALSE, out.width = "500px",fig.align='center'  }
+knitr::include_graphics(paste0(params$folder,"6.Downsampling/Perc_readsInNFR_downsampling.png"))
+
+```
+
+```{r readsinNFRoverPro, echo=FALSE, out.width = "500px", fig.align='center' }
+knitr::include_graphics(paste0(params$folder,"6.Downsampling/Perc_readsInNFRoverPro_downsampling.png"))
+
+```
+
+```{r readsinBAMPE, echo=FALSE, out.width = "500px",fig.align='center'  }
+knitr::include_graphics(paste0(params$folder,"6.Downsampling/Perc_readsInBAMPE_downsampling.png"))
+
+```
+
+```{r readsinBAMPEoverPro, echo=FALSE, out.width = "500px" ,fig.align='center'}
+knitr::include_graphics(paste0(params$folder,"6.Downsampling/Perc_readsInBAMPEoverPro_downsampling.png"))
+
+```

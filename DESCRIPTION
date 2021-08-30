@@ -1,0 +1,34 @@
+Package: bulkATACquality
+Type: Package
+Title: Predict quality of human post-mortem brain bulk ATAC-seq sample 
+Version: 0.1.0
+Author: Jingyu Zhang
+Maintainer: Jingyu Zhang <whale5879@gmail.com>
+Description: Generate quality metrics plots and related statistics to predict quality of sample.
+    All plots and tables can be generated if input a BAM file, 
+    an HTML file of prediction result, statistics, and plots can also be generated.  
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+    utils,
+    dplyr,
+    ATACseqQC,
+    Rsamtools (>= 1.31.2),
+    BSgenome.Hsapiens.UCSC.hg19,
+    TxDb.Hsapiens.UCSC.hg19.knownGene,
+    phastCons100way.UCSC.hg19,
+    ChIPpeakAnno,
+    ggplot2,
+    lattice,
+    rmarkdown,
+    hexbin,
+    grDevices,
+    GenomeInfoDb,
+    GenomicFeatures,
+    graphics,
+    stats
+Depends: R (>= 3.5)
+RoxygenNote: 7.1.1
+SystemRequirements: shell
+NeedsCompilation: yes
