@@ -9,22 +9,30 @@ The goal of bulkATACquality is to generate diagnostic plots and related statisti
 
 ## Installation
 
-You can install the released version of bulkATACquality from [CRAN](https://CRAN.R-project.org) with:
+You can install the released version of bulkATACquality with:
 
 ``` r
-install.packages("bulkATACquality")
+devtools::install_github("jingyu0602/pqATAC")
 ```
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+This is the main function to generate dignostic plots and statistics
 
 ``` r
 library(bulkATACquality)
-bamfile<-system.file("extdata","ex0001.bam",package = "bulkATACquality", mustWork = TRUE)
-outdir<-substr(basename(bamfile),1,6)
+bamfile<-system.file("extdata","ex0001.bam",package = "bulkATACquality", mustWork = TRUE) # read internal data
+outdir<-substr(basename(bamfile),1,6) # set the output directory
 dir.create(outdir)
-bulkATAC(bamfile,outdir)
-## basic example code
+bulkATAC(bamfile,outdir) #generate dignostic plots and statistics
 ```
 
+Downsampling bamfile and generate related plots can be achieved by:
+``` r
+down(bamfile,outdir)
+```
+
+To generate HTML file with prediction result of sample quality, all dignostic plots and statistics:
+``` r
+generateHTML(outdir) # the directory should be same as above output directory, an HTML file can be generated in this directory
+```
