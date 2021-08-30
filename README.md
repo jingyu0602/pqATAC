@@ -21,6 +21,10 @@ This is a basic example which shows you how to solve a common problem:
 
 ``` r
 library(bulkATACquality)
+bamfile<-system.file("extdata","ex0001.bam",package = "bulkATACquality", mustWork = TRUE)
+outdir<-substr(basename(bamfile),1,6)
+dir.create(outdir)
+bulkATAC(bamfile,outdir)
 ## basic example code
 ```
 
